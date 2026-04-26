@@ -1,0 +1,6 @@
+config gigaset-info-center 'settings'
+	option api_key 'YOUR_OPENWEATHERMAP_API_KEY'
+	option city 'Berlin'
+	option latitude '52.52437'
+	option longitude '13.41053'
+	option lang 'de'
