@@ -1,4 +1,4 @@
-# Replacement weather service for `info.gigaset.net`
+# Replacement weather service for `info.gigaset.net` on OpenWrt
 
 This project allows to host your own mini-service for providing weather forecasts to your Gigaset IP handset (e.g. Gigaset C430A Go) even though, Siemens has discontinued running `info.gigaset.net` which was previously providing the data-source.
 
