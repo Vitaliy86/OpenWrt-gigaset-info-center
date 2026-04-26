@@ -17,9 +17,9 @@ jobs:
       matrix:
         arch:
           # Добавьте нужные архитектуры роутеров
-          - x86_64-25.05         # x86 (VM, NAS)
-          - mipsel_24kc-25.05    # TP-Link, D-Link (MIPS)
-          - aarch64_cortex-a53-25.05  # RPi, MT7622
+          - x86_64-25.12         # x86 (VM, NAS)
+          - mipsel_24kc-25.12    # TP-Link, D-Link (MIPS)
+          - aarch64_cortex-a53-25.12  # RPi, MT7622
 
     steps:
       - name: Checkout
