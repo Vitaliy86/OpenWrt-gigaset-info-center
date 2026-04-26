@@ -1,0 +1,77 @@
+name: Build OpenWrt APK Package
+
+on:
+  push:
+    branches: [ main ]
+    tags: [ 'v*' ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build [${{ matrix.arch }}]
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        arch:
+          # Добавьте нужные архитектуры роутеров
+          - x86_64-25.05         # x86 (VM, NAS)
+          - mipsel_24kc-25.05    # TP-Link, D-Link (MIPS)
+          - aarch64_cortex-a53-25.05  # RPi, MT7622
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Build package via OpenWrt SDK
+        uses: openwrt/gh-action-sdk@main
+        env:
+          ARCH: ${{ matrix.arch }}
+          FEEDNAME: gigaset
+          PACKAGES: gigaset-info-center
+          INDEX: 1
+          BUILD_LOG: 1
+          # Для подписи APK: создайте пару ключей и добавьте
+          # приватный ключ в GitHub Secrets как OPENWRT_PRIVATE_KEY
+          # PRIVATE_KEY: ${{ secrets.OPENWRT_PRIVATE_KEY }}
+
+      - name: Upload APK packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: packages-${{ matrix.arch }}
+          path: |
+            bin/packages/${{ matrix.arch }}/gigaset/*.apk
+            bin/packages/${{ matrix.arch }}/gigaset/packages.adb
+          if-no-files-found: warn
+
+      - name: Upload build logs (on failure)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: logs-${{ matrix.arch }}
+          path: logs/
+
+  release:
+    name: Create Release
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: packages-*
+          merge-multiple: false
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: packages-*/**/*.apk
+          generate_release_notes: true
