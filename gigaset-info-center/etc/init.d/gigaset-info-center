@@ -1,0 +1,30 @@
+#!/bin/sh /etc/rc.common
+
+START=95
+STOP=10
+USE_PROCD=1
+
+UHTTPD_CONF=/etc/config/uhttpd
+
+add_php_interpreter() {
+    local ext="$1"
+    # Проверяем, не добавлено ли уже
+    uci -q get uhttpd.@interpreter[] 2>/dev/null | grep -q "$ext" && return 0
+
+    local sec
+    sec=$(uci add uhttpd interpreter)
+    uci set "uhttpd.${sec}.extension=${ext}"
+    uci set "uhttpd.${sec}.path=/usr/bin/php-cgi"
+}
+
+start_service() {
+    add_php_interpreter ".php"
+    add_php_interpreter ".jsp"
+    add_php_interpreter ".do"
+    uci commit uhttpd
+    /etc/init.d/uhttpd reload
+}
+
+stop_service() {
+    : # uhttpd конфиг не откатываем при остановке
+}
