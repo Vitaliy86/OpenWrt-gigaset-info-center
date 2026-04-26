@@ -1,0 +1,116 @@
+#!/bin/sh
+# gigaset-weather: fetch and format weather for Gigaset handsets
+# Deps: uclient-fetch, jsonfilter, uci (all in OpenWrt base)
+
+API_KEY=$(uci -q get gigaset-info-center.settings.api_key)
+LAT=$(uci -q get gigaset-info-center.settings.latitude)
+LON=$(uci -q get gigaset-info-center.settings.longitude)
+LANG=$(uci -q get gigaset-info-center.settings.lang 2>/dev/null)
+LANG=${LANG:-de}
+
+if [ -z "$API_KEY" ] || [ -z "$LAT" ] || [ -z "$LON" ]; then
+    echo "Error: configure /etc/config/gigaset-info-center first"
+    exit 1
+fi
+
+URL="https://api.openweathermap.org/data/2.5/forecast"
+URL="${URL}?lat=${LAT}&lon=${LON}&appid=${API_KEY}"
+URL="${URL}&units=metric&lang=${LANG}&cnt=40"
+
+# Fetch JSON to temp file
+TMP=$(mktemp /tmp/gigaset-weather.XXXXXX)
+uclient-fetch -q -O "$TMP" "$URL" 2>/dev/null
+
+if [ ! -s "$TMP" ]; then
+    rm -f "$TMP"
+    echo "Error: cannot reach OpenWeatherMap API"
+    exit 1
+fi
+
+# Day-name arrays (de/en)
+case "$LANG" in
+    de) DAYS="So Mo Di Mi Do Fr Sa" ;;
+    ru) DAYS="Вс Пн Вт Ср Чт Пт Сб" ;;
+    *)  DAYS="Su Mo Tu We Th Fr Sa" ;;
+esac
+
+# Parse forecast: group by date, track tmin/tmax/rain/desc
+awk -v days="$DAYS" '
+BEGIN {
+    n = split(days, dayname, " ")
+}
+# jsonfilter outputs one value per line; we call it per field below
+' /dev/null
+
+# Extract fields with jsonfilter then aggregate in awk
+jsonfilter -i "$TMP" -e '@.list[*].dt' > /tmp/gw_dt.tmp
+jsonfilter -i "$TMP" -e '@.list[*].main.temp_min' > /tmp/gw_tmin.tmp
+jsonfilter -i "$TMP" -e '@.list[*].main.temp_max' > /tmp/gw_tmax.tmp
+jsonfilter -i "$TMP" -e '@.list[*].weather[0].description' > /tmp/gw_desc.tmp
+# rain is optional key — use 0 if absent
+jsonfilter -i "$TMP" -e '@.list[*]["rain"]["3h"]' 2>/dev/null > /tmp/gw_rain.tmp
+
+rm -f "$TMP"
+
+# Aggregate per day and print Gigaset format
+paste /tmp/gw_dt.tmp /tmp/gw_tmin.tmp /tmp/gw_tmax.tmp /tmp/gw_desc.tmp | \
+awk -v lang="$LANG" '
+BEGIN {
+    split("So Mo Di Mi Do Fr Sa", de, " ")
+    split("Su Mo Tu We Th Fr Sa", en, " ")
+    split("Вс Пн Вт Ср Чт Пт Сб", ru, " ")
+    count = 0
+}
+{
+    dt   = $1
+    tmin = $2
+    tmax = $3
+    # description may have spaces — join remaining fields
+    desc = ""
+    for(i=4; i<=NF; i++) desc = desc (i>4?" ":"") $i
+
+    # date from unix timestamp (POSIX)
+    cmd = "date -d @" dt " +\"%Y-%m-%d %w %d.%m.%Y\" 2>/dev/null || date -r " dt " +\"%Y-%m-%d %w %d.%m.%Y\""
+    cmd | getline dateline
+    close(cmd)
+    split(dateline, d, " ")
+    ymd = d[1]; dow = d[2]+1; dmy = d[3]
+
+    if (ymd != cur_day) {
+        if (cur_day != "" && count < 6) {
+            if (lang=="de")      prefix = de[cur_dow]
+            else if (lang=="ru") prefix = ru[cur_dow]
+            else                 prefix = en[cur_dow]
+            printf "%s, %s\n%.1f/%.1f°C/%.0f mm\n%s\n\n",
+                prefix, cur_dmy,
+                cur_tmin, cur_tmax, cur_rain,
+                cur_desc
+            count++
+        }
+        cur_day  = ymd
+        cur_dow  = dow
+        cur_dmy  = dmy
+        cur_tmin = tmin+0
+        cur_tmax = tmax+0
+        cur_rain = 0
+        cur_desc = desc
+    } else {
+        if (tmin+0 < cur_tmin) cur_tmin = tmin+0
+        if (tmax+0 > cur_tmax) cur_tmax = tmax+0
+    }
+}
+END {
+    if (cur_day != "" && count < 6) {
+        if (lang=="de")      prefix = de[cur_dow]
+        else if (lang=="ru") prefix = ru[cur_dow]
+        else                 prefix = en[cur_dow]
+        printf "%s, %s\n%.1f/%.1f°C/%.0f mm\n%s\n\n",
+            prefix, cur_dmy,
+            cur_tmin, cur_tmax, cur_rain,
+            cur_desc
+    }
+}
+'
+
+rm -f /tmp/gw_dt.tmp /tmp/gw_tmin.tmp /tmp/gw_tmax.tmp \
+       /tmp/gw_desc.tmp /tmp/gw_rain.tmp
