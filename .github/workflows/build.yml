@@ -15,11 +15,14 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        # Формат: {cpu_arch}-{openwrt_version}
+        # Список тегов: https://github.com/openwrt/docker
         arch:
-          # Добавьте нужные архитектуры роутеров
-          #- x86_64-25.12         # x86 (VM, NAS)
-          #- mipsel_24kc-25.12    # TP-Link, D-Link (MIPS)
-          - aarch64_cortex-a53-25.12.2  # RPi, MT7622
+          - x86_64-25.12.2
+          - aarch64_generic-25.12.2
+          - mipsel_24kc-25.12.2
+          - mips_24kc-25.12.2
+          - arm_cortex-a9_vfpv3-d16-25.12.2
 
     steps:
       - name: Checkout
@@ -35,9 +38,7 @@ jobs:
           PACKAGES: gigaset-info-center
           INDEX: 1
           BUILD_LOG: 1
-          # Для подписи APK: создайте пару ключей и добавьте
-          # приватный ключ в GitHub Secrets как OPENWRT_PRIVATE_KEY
-          # PRIVATE_KEY: ${{ secrets.OPENWRT_PRIVATE_KEY }}
+          IGNORE_ERRORS: 0
 
       - name: Upload APK packages
         uses: actions/upload-artifact@v4
@@ -48,7 +49,7 @@ jobs:
             bin/packages/${{ matrix.arch }}/gigaset/packages.adb
           if-no-files-found: warn
 
-      - name: Upload build logs (on failure)
+      - name: Upload build logs on failure
         if: failure()
         uses: actions/upload-artifact@v4
         with:
