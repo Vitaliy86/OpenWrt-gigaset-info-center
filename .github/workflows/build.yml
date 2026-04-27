@@ -16,8 +16,8 @@ jobs:
       fail-fast: false
       matrix:
         arch:
-          #- x86_64-25.12.2
           - aarch64_generic-25.12.2
+          #- x86_64-25.12.2
           #- mipsel_24kc-25.12.2
           #- mips_24kc-25.12.2
           #- arm_cortex-a9_vfpv3-d16-25.12.2
@@ -41,10 +41,17 @@ jobs:
           PACKAGES: gigaset-info-center
           INDEX: 1
           BUILD_LOG: 1
-          IGNORE_ERRORS: 1
-          #V: sc    
+          V: sc
+
+      - name: Show produced files (debug)
+        if: always()
+        run: |
+          echo "=== ARCH_SHORT: ${{ env.ARCH_SHORT }} ==="
+          echo "=== bin/packages/ ==="
+          find bin/packages/ -type f 2>/dev/null || echo "(empty)"
 
       - name: Upload APK packages
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: packages-${{ matrix.arch }}
@@ -53,12 +60,13 @@ jobs:
             bin/packages/${{ env.ARCH_SHORT }}/gigaset/packages.adb
           if-no-files-found: warn
 
-      - name: Upload build logs on failure
-        if: failure()
+      - name: Upload build logs
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: logs-${{ matrix.arch }}
           path: logs/
+          if-no-files-found: warn
 
   release:
     name: Create Release
