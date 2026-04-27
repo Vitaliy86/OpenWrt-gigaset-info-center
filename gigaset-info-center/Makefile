@@ -4,7 +4,10 @@ PKG_NAME:=gigaset-info-center
 PKG_VERSION:=1.1.0
 PKG_RELEASE:=1
 PKG_LICENSE:=AGPL-3.0
-PKG_MAINTAINER:=Your Name <you@example.com>
+PKG_MAINTAINER:=Vitaliy <your@email.com>
+
+# Нет внешнего источника — только локальные файлы
+PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_NAME)-$(PKG_VERSION)
 
 include $(INCLUDE_DIR)/package.mk
 
@@ -12,8 +15,7 @@ define Package/gigaset-info-center
   SECTION:=net
   CATEGORY:=Network
   TITLE:=Local Gigaset Info Center (weather for IP phones)
-  URL:=https://github.com/tvogel/local-gigaset-info-center
-  # Только пакеты которые всегда есть в base — нет php8!
+  URL:=https://github.com/Vitaliy86/OpenWrt-gigaset-info-center
   DEPENDS:=+uhttpd +uclient-fetch +jsonfilter
 endef
 
@@ -21,7 +23,11 @@ define Package/gigaset-info-center/description
   Replacement weather service for info.gigaset.net.
   Provides weather forecast to Gigaset IP handsets via local HTTP/CGI.
   Uses shell + uclient-fetch + jsonfilter instead of PHP.
-  Configure via: uci set gigaset-info-center.settings.api_key='...'
+endef
+
+# Обязательно для пакетов без внешнего исходника!
+define Build/Prepare
+	mkdir -p $(PKG_BUILD_DIR)
 endef
 
 define Build/Compile
@@ -45,10 +51,6 @@ define Package/gigaset-info-center/install
 	$(INSTALL_DIR) $(1)/etc/init.d
 	$(INSTALL_BIN) ./files/etc/init.d/gigaset-info-center \
 		$(1)/etc/init.d/gigaset-info-center
-
-	$(INSTALL_DIR) $(1)/etc/uhttpd.d
-	$(INSTALL_DATA) ./files/etc/uhttpd.d/gigaset.conf \
-		$(1)/etc/uhttpd.d/gigaset.conf
 endef
 
 define Package/gigaset-info-center/conffiles
