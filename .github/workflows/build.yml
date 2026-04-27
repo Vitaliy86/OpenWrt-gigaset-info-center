@@ -15,8 +15,6 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # Формат: {cpu_arch}-{openwrt_version}
-        # Список тегов: https://github.com/openwrt/docker
         arch:
           - x86_64-25.12.2
           - aarch64_generic-25.12.2
@@ -30,6 +28,11 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Extract short arch
+        run: |
+          echo "ARCH_SHORT=$(echo '${{ matrix.arch }}' | sed 's/-[0-9][0-9]*\..*//')" \
+            >> $GITHUB_ENV
+
       - name: Build package via OpenWrt SDK
         uses: openwrt/gh-action-sdk@main
         env:
@@ -38,15 +41,14 @@ jobs:
           PACKAGES: gigaset-info-center
           INDEX: 1
           BUILD_LOG: 1
-          IGNORE_ERRORS: 0
 
       - name: Upload APK packages
         uses: actions/upload-artifact@v4
         with:
           name: packages-${{ matrix.arch }}
           path: |
-            bin/packages/${{ matrix.arch }}/gigaset/*.apk
-            bin/packages/${{ matrix.arch }}/gigaset/packages.adb
+            bin/packages/${{ env.ARCH_SHORT }}/gigaset/*.apk
+            bin/packages/${{ env.ARCH_SHORT }}/gigaset/packages.adb
           if-no-files-found: warn
 
       - name: Upload build logs on failure
