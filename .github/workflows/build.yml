@@ -41,6 +41,7 @@ jobs:
           PACKAGES: gigaset-info-center
           INDEX: 1
           BUILD_LOG: 1
+          V: sc    
 
       - name: Upload APK packages
         uses: actions/upload-artifact@v4
