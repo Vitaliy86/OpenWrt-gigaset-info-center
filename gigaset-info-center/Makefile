@@ -16,7 +16,7 @@ define Package/gigaset-info-center
   CATEGORY:=Network
   TITLE:=Local Gigaset Info Center (weather for IP phones)
   URL:=https://github.com/Vitaliy86/OpenWrt-gigaset-info-center
-  DEPENDS:=+uhttpd +uclient-fetch +jsonfilter
+  DEPENDS:=+uclient-fetch +jsonfilter
 endef
 
 define Package/gigaset-info-center/description
