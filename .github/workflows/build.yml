@@ -16,11 +16,11 @@ jobs:
       fail-fast: false
       matrix:
         arch:
-          - x86_64-25.12.2
+          #- x86_64-25.12.2
           - aarch64_generic-25.12.2
-          - mipsel_24kc-25.12.2
-          - mips_24kc-25.12.2
-          - arm_cortex-a9_vfpv3-d16-25.12.2
+          #- mipsel_24kc-25.12.2
+          #- mips_24kc-25.12.2
+          #- arm_cortex-a9_vfpv3-d16-25.12.2
 
     steps:
       - name: Checkout
@@ -41,7 +41,7 @@ jobs:
           PACKAGES: gigaset-info-center
           INDEX: 1
           BUILD_LOG: 1
-          V: sc    
+          #V: sc    
 
       - name: Upload APK packages
         uses: actions/upload-artifact@v4
