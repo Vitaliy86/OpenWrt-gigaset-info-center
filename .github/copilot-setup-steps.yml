@@ -1,0 +1,50 @@
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  copilot-setup-steps:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install OpenWrt SDK dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y build-essential \
+            libncurses-dev gawk git gettext \
+            unzip zlib1g-dev rsync wget curl
+
+      - name: Validate Makefile structure
+        run: |
+          echo "=== Checking package structure ==="
+          test -f gigaset-info-center/Makefile \
+            && echo "✅ Makefile found" \
+            || echo "❌ Makefile missing"
+          
+          for f in \
+            files/etc/config/gigaset-info-center \
+            files/etc/init.d/gigaset-info-center \
+            files/usr/bin/gigaset-weather \
+            files/www/cgi-bin/menu.jsp \
+            files/www/cgi-bin/request.do; do
+            test -f "gigaset-info-center/$f" \
+              && echo "✅ $f" \
+              || echo "❌ MISSING: $f"
+          done
+
+      - name: Check executable bits
+        run: |
+          echo "=== File permissions ==="
+          git ls-files -s gigaset-info-center/files/ | \
+            awk '{
+              mode=$1; file=$4;
+              status=(mode=="100755") ? "✅ 755" : "⚠️  " mode;
+              print status, file
+            }'
